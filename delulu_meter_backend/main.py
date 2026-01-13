@@ -6,6 +6,9 @@ from collections import Counter
 from textblob import TextBlob
 from datetime import timedelta
 import string
+import nltk
+nltk.download('punkt')
+
 
 app = FastAPI(title="VibeCheck API")
 
