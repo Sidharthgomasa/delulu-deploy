@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Delulu Meter 💫</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
+      color: white;
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      text-align: center;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      padding: 30px;
+      border-radius: 20px;
+      width: 420px;
+      margin: auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+    input, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+    }
+    button {
+      background: #ff2e63;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    pre {
+      text-align: left;
+      white-space: pre-wrap;
+      margin-top: 20px;
+      font-size: 13px;
+      background: rgba(0,0,0,0.4);
+      padding: 10px;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>💫 Delulu Meter</h1>
+  <p>How delusional is your chat? Let’s find out 😏</p>
+
+  <div class="card">
+    <input type="file" id="fileInput" />
+    <button onclick="analyze()">Analyze Chat</button>
+    <pre id="result"></pre>
+  </div>
+
+<script>
+async function analyze() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) {
+    alert("Upload a chat file first 😤");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  document.getElementById("result").innerText = "Analyzing... ⏳";
+
+  const response = await fetch("https://YOUR_BACKEND_URL/analyze-chat", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await response.json();
+  document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>
