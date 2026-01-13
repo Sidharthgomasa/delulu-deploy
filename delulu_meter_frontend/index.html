@@ -67,7 +67,8 @@ async function analyze() {
 
   document.getElementById("result").innerText = "Analyzing... ⏳";
 
-  const response = await fetch("https://YOUR_BACKEND_URL/analyze-chat", {
+  const response = await fetch("https://delulu-deploy.onrender.com/analyze-chat", {
+
     method: "POST",
     body: formData
   });
