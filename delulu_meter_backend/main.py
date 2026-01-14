@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import re
 import numpy as np
@@ -6,15 +7,25 @@ from collections import Counter
 from textblob import TextBlob
 from datetime import timedelta
 import string
-import nltk
-nltk.download('punkt')
 
+app = FastAPI(title="Delulu Meter API")
 
-app = FastAPI(title="VibeCheck API")
+# -------- CORS --------
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# -------- CONFIG --------
+MAX_LINES = 5000   # hard safety limit for Render free tier
 
 # ------------------ PARSER ------------------
 def parse_whatsapp_chat_bytes(file_bytes):
-    lines = file_bytes.decode("utf-8", errors="ignore").split('\n')
+    text = file_bytes.decode("utf-8", errors="ignore")
+    lines = text.split('\n')[:MAX_LINES]
     data = []
 
     pattern = r'^(\d{1,2}/\d{1,2}/\d{2,4}),\s(\d{1,2}:\d{2}\s?(?:am|pm|AM|PM)?)\s-\s(.*?):\s(.*)$'
@@ -25,6 +36,9 @@ def parse_whatsapp_chat_bytes(file_bytes):
             data.append(match.groups())
 
     df = pd.DataFrame(data, columns=["Date", "Time", "Author", "Message"])
+    if df.empty:
+        return df
+
     df['DateTime'] = pd.to_datetime(df['Date'] + ' ' + df['Time'], errors='coerce', dayfirst=True)
     df = df.dropna(subset=['DateTime'])
     df['Message'] = df['Message'].astype(str)
@@ -131,6 +145,11 @@ def interaction_harmony_index(df):
     reply = compute_reply_times(df)
     reply_score = 1 if reply and np.mean(list(reply.values())) < 30 else 0.6 if reply else 0.5
     return round(((balance + reply_score + ((sentiment+1)/2)) / 3)*100,1)
+
+# ------------------ HEALTH CHECK ------------------
+@app.get("/ping")
+def ping():
+    return {"status": "alive"}
 
 # ------------------ API ENDPOINT ------------------
 @app.post("/analyze-chat")
