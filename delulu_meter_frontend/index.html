@@ -1,79 +1,172 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Delulu Meter 💫</title>
+  <title>Delulu Meter 😈</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background: linear-gradient(135deg, #0f0f0f, #1a1a2e);
+      background: linear-gradient(135deg, #0f0f0f, #1a002e);
       color: white;
-      font-family: Arial, sans-serif;
-      padding: 40px;
-      text-align: center;
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
     }
+    h1 { text-align:center; font-size:42px; color:#ff2e63; }
     .card {
       background: rgba(255,255,255,0.08);
-      padding: 30px;
+      padding: 20px;
       border-radius: 20px;
-      width: 420px;
-      margin: auto;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
-    }
-    input, button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 10px;
-      border: none;
-      font-size: 15px;
+      margin: 15px 0;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
     button {
-      background: #ff2e63;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
+      background:#ff2e63;
+      color:white;
+      border:none;
+      padding:12px;
+      border-radius:12px;
+      width:100%;
+      font-size:16px;
+      cursor:pointer;
     }
-    pre {
-      text-align: left;
-      white-space: pre-wrap;
-      margin-top: 20px;
-      font-size: 13px;
-      background: rgba(0,0,0,0.4);
-      padding: 10px;
-      border-radius: 10px;
+    .big {
+      font-size:60px;
+      text-align:center;
+      color:#ff2e63;
+      font-weight:bold;
+    }
+    .tag {
+      display:inline-block;
+      background:#ff2e63;
+      padding:8px 14px;
+      border-radius:30px;
+      margin:5px;
+    }
+    .grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+      gap:15px;
     }
   </style>
 </head>
 <body>
 
-  <h1>💫 Delulu Meter</h1>
-  <p>How delusional is your chat? Let’s find out 😏</p>
+<h1>😈 Delulu Meter</h1>
+<p style="text-align:center;">Upload chat. We expose feelings.</p>
 
-  <div class="card">
-    <input type="file" id="fileInput" />
-    <button onclick="analyze()">Analyze Chat</button>
-    <pre id="result"></pre>
-  </div>
+<div class="card">
+  <input type="file" id="fileInput">
+  <button onclick="startAnalysis()">Analyze Chat</button>
+</div>
+
+<div class="card">
+  <div class="big" id="statusText">--</div>
+  <p style="text-align:center;">Status</p>
+</div>
+
+<div class="card">
+  <div class="big" id="harmonyScore">--%</div>
+  <p style="text-align:center;">Harmony Score 💓</p>
+</div>
+
+<div class="grid">
+  <div class="card"><canvas id="initiationChart"></canvas></div>
+  <div class="card"><canvas id="replyChart"></canvas></div>
+  <div class="card"><canvas id="sentimentChart"></canvas></div>
+  <div class="card"><canvas id="emojiChart"></canvas></div>
+  <div class="card"><canvas id="gapChart"></canvas></div>
+</div>
+
+<div class="card" id="styleBox"></div>
+<div class="card" id="keywordBox"></div>
 
 <script>
-async function analyze() {
-  const file = document.getElementById("fileInput").files[0];
-  if (!file) {
-    alert("Upload a chat file first 😤");
-    return;
-  }
+let charts = {};
 
+async function startAnalysis() {
+  const file = document.getElementById("fileInput").files[0];
+  if (!file) { alert("Upload file 😤"); return; }
+
+  document.getElementById("statusText").innerText = "Uploading...";
   const formData = new FormData();
   formData.append("file", file);
 
-  document.getElementById("result").innerText = "Analyzing... ⏳";
-
-  const response = await fetch("https://YOUR_BACKEND_URL/analyze-chat", {
+  const res = await fetch("https://delulu-deploy.onrender.com/analyze-chat", {
     method: "POST",
     body: formData
   });
 
-  const data = await response.json();
-  document.getElementById("result").innerText = JSON.stringify(data, null, 2);
+  const data = await res.json();
+  pollResult(data.task_id);
+}
+
+async function pollResult(taskId) {
+  document.getElementById("statusText").innerText = "Reading messages...";
+  const interval = setInterval(async () => {
+    const res = await fetch(`https://delulu-deploy.onrender.com/result/${taskId}`);
+    const data = await res.json();
+
+    if (data.status === "done") {
+      clearInterval(interval);
+      document.getElementById("statusText").innerText = "Analysis Complete 😈";
+      renderDashboard(data);
+    } else if (data.status === "error") {
+      clearInterval(interval);
+      document.getElementById("statusText").innerText = "Error 😭";
+    } else {
+      document.getElementById("statusText").innerText = "Analyzing emotions...";
+    }
+  }, 2000);
+}
+
+function destroyCharts() {
+  for (let key in charts) { charts[key].destroy(); }
+  charts = {};
+}
+
+function renderDashboard(data) {
+  destroyCharts();
+  document.getElementById("harmonyScore").innerText = data.harmony_score + "%";
+  renderPie("initiationChart", data.initiation_index, "Initiation Index");
+  renderBar("replyChart", data.reply_times, "Reply Times");
+  renderLine("sentimentChart", data.sentiment_timeline, "Sentiment");
+  renderBar("emojiChart", data.emoji_usage, "Emoji Usage");
+  renderBar("gapChart", data.interaction_gaps, "Interaction Gaps");
+
+  let styleHtml = "<h3>🗣 Communication Style</h3>";
+  for (let k in data.communication_style) {
+    styleHtml += `<div class="tag">${k} → ${data.communication_style[k]}</div>`;
+  }
+  document.getElementById("styleBox").innerHTML = styleHtml;
+
+  let keyHtml = "<h3>🔤 Keyword Themes</h3>";
+  data.keyword_themes.forEach(k => {
+    keyHtml += `<div class="tag">${k[0]} (${k[1]})</div>`;
+  });
+  document.getElementById("keywordBox").innerHTML = keyHtml;
+}
+
+function renderPie(id, obj, title) {
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'pie',
+    data: { labels:Object.keys(obj), datasets:[{data:Object.values(obj), backgroundColor:['#ff2e63','#08d9d6','#f9ed69']}] },
+    options:{ plugins:{ title:{ display:true, text:title } } }
+  });
+}
+
+function renderBar(id, obj, title) {
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'bar',
+    data: { labels:Object.keys(obj), datasets:[{label:title, data:Object.values(obj), backgroundColor:'#ff2e63'}] },
+    options:{ plugins:{ title:{ display:true, text:title } } }
+  });
+}
+
+function renderLine(id, obj, title) {
+  charts[id] = new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels:Object.keys(obj), datasets:[{label:title, data:Object.values(obj), borderColor:'#08d9d6', fill:false}] },
+    options:{ plugins:{ title:{ display:true, text:title } } }
+  });
 }
 </script>
 
