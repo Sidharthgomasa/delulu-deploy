@@ -1,6 +1,9 @@
-fastapi
-uvicorn
+streamlit
 pandas
 numpy
+matplotlib
 textblob
-python-multipart
+nltk
+regex
+tqdm
+python-dateutil
